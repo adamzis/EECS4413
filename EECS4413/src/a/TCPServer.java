@@ -1,68 +1,86 @@
 package a;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Set;
 import java.util.HashSet;
-import java.util.Date;
+import java.util.Set;
 
 public class TCPServer {
 
 	private PrintStream log;
 	private Set<InetAddress> firewall;
 
-	public TCPServer(int port, PrintStream log, Set<InetAddress> firewall) throws IOException {
+	public TCPServer(int port, PrintStream log, Set<InetAddress> firewall) {
 
-		File running = new File(System.getProperty("user.home"), "/Documents/4413/running.txt");
-		ServerSocket server = new ServerSocket(port);
-		InetAddress localHost = InetAddress.getLoopbackAddress();
-
+		ServerSocket server = null;
 		this.log = log;
 		this.firewall = firewall;
 
-		this.insertLogEntry("Server Start", ipPortToString(server.getInetAddress(), port));
+		File running = new File(System.getProperty("user.home"), "/Documents/4413/running.txt");
 
-		this.punch(server.getInetAddress());
+		try {
+			server = new ServerSocket(port);
+		} catch (IOException e) {
+			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+		}
+
+		InetAddress localHost = InetAddress.getLoopbackAddress();
+		String serverIpPort = ipPortToString(server.getInetAddress(), port);
+
+		this.insertLogEntry("Server Start", serverIpPort);
+
 		this.punch(localHost);
-		
-		System.out.println(localHost);
 
 		while (running.exists()) {
-			Socket client = server.accept();
-			
-			System.out.println(client.getInetAddress());
 
+			Socket client = null;
+			try {
+				client = server.accept();
+			} catch (IOException e) {
+				this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			}
+
+			// Testing
+			System.out.println(client.getInetAddress());
 			System.out.println(allowedIp(client));
+
 			if (allowedIp(client)) {
 				Worker worker = new Worker(this);
 				worker.handle(client);
 			} else {
-				client.close();
+				this.insertLogEntry("Firewall Violation", client.getInetAddress().toString());
+				try {
+					client.close();
+				} catch (IOException e) {
+					this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+				}
 			}
-
 		}
 
 		this.insertLogEntry("Server Shutdown", null);
-		server.close();
+
+		try {
+			server.close();
+		} catch (IOException e) {
+			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+		}
 	}
 
 	/**
 	 * Inserts an entry into the log file with the server's date and time.
 	 * 
-	 * @param entry
-	 *            main event that occurred (Server start, client connection, etc).
-	 * @param subEntry
-	 *            additional information such as the client's IP address and port.
+	 * @param entry    main event that occurred (Server start, client connection,
+	 *                 etc).
+	 * @param subEntry additional information such as the client's IP address and
+	 *                 port.
 	 */
 	public void insertLogEntry(String entry, String subEntry) {
 		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
@@ -71,8 +89,7 @@ public class TCPServer {
 	/**
 	 * Adds an IP Address to the fire wall for authorization.
 	 * 
-	 * @param inetAddress
-	 *            an IP address that should be allowed to connect.
+	 * @param inetAddress an IP address that should be allowed to connect.
 	 */
 	public void punch(InetAddress inetAddress) {
 		firewall.add(inetAddress);
@@ -81,8 +98,7 @@ public class TCPServer {
 	/**
 	 * Removes a previously authorized IP address from the fire wall.
 	 * 
-	 * @param inetAddress
-	 *            an IP address that should no longer be allowed to connect.
+	 * @param inetAddress an IP address that should no longer be allowed to connect.
 	 */
 	public void plug(InetAddress inetAddress) {
 		firewall.remove(inetAddress);
@@ -91,8 +107,7 @@ public class TCPServer {
 	/**
 	 * Checks if the client's IP is on the fire wall.
 	 * 
-	 * @param client
-	 *            socket object of the connected client
+	 * @param client socket object of the connected client
 	 * @return true if the client's IP is in the fire wall, false if it is not.
 	 */
 	private boolean allowedIp(Socket client) {
@@ -104,17 +119,14 @@ public class TCPServer {
 		} else {
 			return false;
 		}
-
 	}
 
 	/**
 	 * Formats an IP and port into a string that will be used as a subentry in the
 	 * insertLogEntry() method.
 	 * 
-	 * @param ip
-	 *            an InetAddress object.
-	 * @param port
-	 *            a port number associated with the connection.
+	 * @param ip   an InetAddress object.
+	 * @param port a port number associated with the connection.
 	 * @return
 	 */
 	private String ipPortToString(InetAddress ip, int port) {
@@ -136,7 +148,7 @@ public class TCPServer {
 		return formattedTime;
 	}
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) throws FileNotFoundException {
 
 		int listenPort = 10560;
 
@@ -153,7 +165,5 @@ public class TCPServer {
 		System.out.println("Server shutting down");
 
 		log.close();
-
 	}
-
 }
