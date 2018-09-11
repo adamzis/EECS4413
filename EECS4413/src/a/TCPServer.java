@@ -30,6 +30,8 @@ public class TCPServer {
 			server = new ServerSocket(port);
 		} catch (IOException e) {
 			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println("Error " + e.getMessage());
+			System.exit(1);
 		}
 
 		InetAddress localHost = InetAddress.getLoopbackAddress();
@@ -53,8 +55,12 @@ public class TCPServer {
 			System.out.println(allowedIp(client));
 
 			if (allowedIp(client)) {
-				Worker worker = new Worker(this);
-				worker.handle(client);
+				Worker worker = new Worker(this, client);
+
+				Thread workerThread = new Thread(worker);
+				
+				workerThread.start();
+				
 			} else {
 				this.insertLogEntry("Firewall Violation", client.getInetAddress().toString());
 				try {
@@ -71,6 +77,8 @@ public class TCPServer {
 			server.close();
 		} catch (IOException e) {
 			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println("Error " + e.getMessage());
+			System.exit(1);
 		}
 	}
 

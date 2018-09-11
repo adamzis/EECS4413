@@ -10,13 +10,16 @@ import java.time.format.DateTimeFormatter;
 
 public class Test {
 
-	public static void main(String[] args) throws IOException {
-		ZonedDateTime currTime = ZonedDateTime.now();
-		DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("E d MMM yyyy HH:mm:ss z");
-		
-		String formattedTime = currTime.format(timeFormat);
-		System.out.println(formattedTime);
-		
+	public static void main(String[] args) {
+
+		MyRun r1 = new MyRun();
+
+		MyRun r2 = new MyRun();
+		Thread t1 = new Thread(r1);
+		Thread t2 = new Thread(r2);
+
+		t1.start();
+		t2.start();
 	}
 
 }
