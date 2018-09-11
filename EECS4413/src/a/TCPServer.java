@@ -35,6 +35,7 @@ public class TCPServer {
 
 		this.punch(localHost);
 
+		int count = 0;
 		while (!server.isClosed()) {
 			Socket client = createClient(server);
 
@@ -53,6 +54,7 @@ public class TCPServer {
 		}
 
 		closeServer(server);
+		System.out.println("SERVER CLOSED");
 	}
 
 	private void firewallVio(Socket client) {
