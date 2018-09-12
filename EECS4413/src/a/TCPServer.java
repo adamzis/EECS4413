@@ -23,8 +23,6 @@ public class TCPServer {
 		ServerSocket server = null;
 		this.log = log;
 		this.firewall = firewall;
-		// File running = new File(System.getProperty("user.home"),
-		// "/Documents/4413/running.txt");
 
 		server = createServer(port, server);
 
@@ -32,24 +30,16 @@ public class TCPServer {
 		String serverIpPort = ipPortToString(server.getInetAddress(), port);
 
 		this.insertLogEntry("Server Start", serverIpPort);
-
 		this.punch(localHost);
 
-		int count = 0;
 		while (!server.isClosed()) {
 			Socket client = createClient(server);
 
-			// Testing
-			// System.out.println(client.getInetAddress());
-			// System.out.println(allowedIp(client));
-
 			if (allowedIp(client)) {
-				Worker worker = new Worker(this, client);
-
-				Thread workerThread = new Thread(worker);
-				workerThread.start();
+				Worker clientHandler = new Worker(this, client);
+				clientHandler.start();
 			} else {
-				firewallVio(client);
+				firewallViol(client);
 			}
 		}
 
@@ -57,7 +47,7 @@ public class TCPServer {
 		System.out.println("SERVER CLOSED");
 	}
 
-	private void firewallVio(Socket client) {
+	private void firewallViol(Socket client) {
 		this.insertLogEntry("Firewall Violation", client.getInetAddress().toString());
 		try {
 			client.close();
@@ -104,10 +94,10 @@ public class TCPServer {
 	/**
 	 * Inserts an entry into the log file with the server's date and time.
 	 * 
-	 * @param entry
-	 *            main event that occurred (Server start, client connection, etc).
-	 * @param subEntry
-	 *            additional information such as the client's IP address and port.
+	 * @param entry    main event that occurred (Server start, client connection,
+	 *                 etc).
+	 * @param subEntry additional information such as the client's IP address and
+	 *                 port.
 	 */
 	public void insertLogEntry(String entry, String subEntry) {
 		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
@@ -116,8 +106,7 @@ public class TCPServer {
 	/**
 	 * Adds an IP Address to the fire wall for authorization.
 	 * 
-	 * @param inetAddress
-	 *            an IP address that should be allowed to connect.
+	 * @param inetAddress an IP address that should be allowed to connect.
 	 */
 	public void punch(InetAddress inetAddress) {
 		firewall.add(inetAddress);
@@ -126,20 +115,12 @@ public class TCPServer {
 	/**
 	 * Removes a previously authorized IP address from the fire wall.
 	 * 
-	 * @param inetAddress
-	 *            an IP address that should no longer be allowed to connect.
+	 * @param inetAddress an IP address that should no longer be allowed to connect.
 	 */
 	public void plug(InetAddress inetAddress) {
 		firewall.remove(inetAddress);
 	}
 
-	/**
-	 * Checks if the client's IP is on the fire wall.
-	 * 
-	 * @param client
-	 *            socket object of the connected client
-	 * @return true if the client's IP is in the fire wall, false if it is not.
-	 */
 	private boolean allowedIp(Socket client) {
 		InetAddress clientIp = client.getInetAddress();
 		boolean allowedIp = firewall.contains(clientIp);
@@ -151,16 +132,6 @@ public class TCPServer {
 		}
 	}
 
-	/**
-	 * Formats an IP and port into a string that will be used as a subentry in the
-	 * insertLogEntry() method.
-	 * 
-	 * @param ip
-	 *            an InetAddress object.
-	 * @param port
-	 *            a port number associated with the connection.
-	 * @return
-	 */
 	private String ipPortToString(InetAddress ip, int port) {
 		String ipPort = ip.toString() + ":" + Integer.toString(port);
 

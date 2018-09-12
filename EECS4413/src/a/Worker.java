@@ -1,11 +1,9 @@
 package a;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.Scanner;
 
 public class Worker extends Thread {
 
@@ -31,40 +29,46 @@ public class Worker extends Thread {
 	/**
 	 * Handles a connected client socket throughout the lifetime of the connection
 	 * 
-	 * @param client
-	 *            a client socket
+	 * @param client a client socket
 	 * @throws IOException
 	 */
 	public void handle() throws IOException {
-		clientIp = this.client.getInetAddress().toString();
-		server.insertLogEntry("Client Connnected", this.clientIp);
-		boolean connected = true;
+		clientIp = client.getInetAddress().toString();
+		server.insertLogEntry("Client Connnected", clientIp);
 
-		while (connected) {
-			connected = clientServComm();
-		}
+		System.out.println("Client Connected");
 
+		clientCommand();
 		bye();
-		System.out.println("CLIENT DISCONNECTED");
+
+		System.out.println("Client Disconnected");
 	}
 
-	// Fix these atrocious names and refactor heavily
-	private boolean clientServComm() throws IOException {
-		PrintStream clientOutput = new PrintStream(client.getOutputStream());
-		BufferedReader clientInput = new BufferedReader(new InputStreamReader(client.getInputStream()));
+	private void clientCommand() {
+		PrintStream clientOutput = null;
+		Scanner clientScanner = null;
 
-		System.out.println("CLIENT CONNECTED TYPE SOMETING");
-
-		String clientString = clientInput.readLine();
-		System.out.println(clientString);
-		clientOutput.println("YOU WROTE " + clientString);
-
-		if (clientString.compareToIgnoreCase("exit") != 0) {
-			return true;
-		} else {
-			return false;
+		try {
+			clientOutput = new PrintStream(client.getOutputStream());
+			clientScanner = new Scanner(client.getInputStream());
+		} catch (IOException e) {
+			bye();
 		}
 
+		clientOutput.println("Please enter a command, type 'exit' to exit");
+		String clientString = clientScanner.nextLine();
+
+		System.out.println("Client entered " + clientString);
+		clientOutput.println("You entered " + clientString);
+
+		while (clientString.compareToIgnoreCase("exit") != 0) {
+			clientString = clientScanner.nextLine();
+			System.out.println(clientString);
+			clientOutput.println("You entered " + clientString);
+		}
+
+		clientOutput.println("Exiting");
+		clientScanner.close();
 	}
 
 	private void bye() {
@@ -72,6 +76,8 @@ public class Worker extends Thread {
 			client.close();
 		} catch (IOException e) {
 			server.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println(e.getMessage() + " shutting down");
+			System.exit(1);
 		}
 
 		server.insertLogEntry("Client Disconnected", clientIp);
