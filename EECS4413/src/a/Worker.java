@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Worker extends Thread {
 
@@ -29,7 +31,8 @@ public class Worker extends Thread {
 	/**
 	 * Handles a connected client socket throughout the lifetime of the connection
 	 * 
-	 * @param client a client socket
+	 * @param client
+	 *            a client socket
 	 * @throws IOException
 	 */
 	public void handle() throws IOException {
@@ -38,37 +41,48 @@ public class Worker extends Thread {
 
 		System.out.println("Client Connected");
 
-		clientCommand();
+		clientIO();
 		bye();
 
 		System.out.println("Client Disconnected");
 	}
 
-	private void clientCommand() {
-		PrintStream clientOutput = null;
-		Scanner clientScanner = null;
+	private void clientIO() throws IOException {
+		PrintStream clientOutput = new PrintStream(client.getOutputStream());
+		Scanner clientScanner = new Scanner(client.getInputStream());
 
-		try {
-			clientOutput = new PrintStream(client.getOutputStream());
-			clientScanner = new Scanner(client.getInputStream());
-		} catch (IOException e) {
-			bye();
+		String clientInput = clientScanner.nextLine();
+		boolean closeClient = false;
+
+		while (!closeClient) {
+			clientOutput.println("Please enter a command, type 'bye' to exit");
+			clientInput = clientScanner.nextLine();
+			clientOutput.println("You entered " + clientInput + " processing\n");
+
+			closeClient = clientCommand(clientInput, clientOutput);
 		}
 
-		clientOutput.println("Please enter a command, type 'exit' to exit");
-		String clientString = clientScanner.nextLine();
-
-		System.out.println("Client entered " + clientString);
-		clientOutput.println("You entered " + clientString);
-
-		while (clientString.compareToIgnoreCase("exit") != 0) {
-			clientString = clientScanner.nextLine();
-			System.out.println(clientString);
-			clientOutput.println("You entered " + clientString);
-		}
-
-		clientOutput.println("Exiting");
+		clientOutput.println("Disconnecting from server, have a nice day");
 		clientScanner.close();
+	}
+
+	// Input from client is passed to this method, which calls the appropriate
+	// methods
+	private boolean clientCommand(String clientInput, PrintStream clientOutput) {
+		boolean exitMatch = false;
+
+		Pattern exitPattern = Pattern.compile("(\\s*)(bye)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher exitMatcher = exitPattern.matcher(clientInput);
+		Pattern timePattern = Pattern.compile("(\\s*)(get)(\\s*)(time)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher timeMatcher = timePattern.matcher(clientInput);
+
+		if (exitMatcher.matches()) {
+			exitMatch = true;
+		} else if (timeMatcher.matches()) {
+			clientOutput.println(server.getTime());
+		}
+
+		return exitMatch;
 	}
 
 	private void bye() {
