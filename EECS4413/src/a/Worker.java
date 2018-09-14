@@ -2,7 +2,9 @@ package a;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.math.BigInteger;
 import java.net.Socket;
+import java.util.Random;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,9 +55,10 @@ public class Worker extends Thread {
 
 		String clientInput = clientScanner.nextLine();
 		boolean closeClient = false;
+		
+		clientOutput.println("Please enter a command, type 'bye' to exit");
 
 		while (!closeClient) {
-			clientOutput.println("Please enter a command, type 'bye' to exit");
 			clientInput = clientScanner.nextLine();
 			clientOutput.println("You entered " + clientInput + " processing\n");
 
@@ -66,18 +69,42 @@ public class Worker extends Thread {
 		clientScanner.close();
 	}
 
-	// Input from client is passed to this method, which calls the appropriate
-	// methods
+	/**
+	 * Parses the client input using regex
+	 * 
+	 * @param clientInput
+	 *            the input string passed from the client to the server
+	 * @param clientOutput
+	 *            a reference to the printstream object to return called method
+	 *            outputs
+	 * @return true if the client enters 'bye', false otherwise
+	 */
 	private boolean clientCommand(String clientInput, PrintStream clientOutput) {
 		boolean exitMatch = false;
+		Pattern primePattern = Pattern.compile("(\\s*)(prime)(\\s*)(\\d+)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher primeMatch = primePattern.matcher(clientInput);
 
 		if (clientInput.matches("(?i)(\\s*)(bye)(\\s*)")) {
 			exitMatch = true;
 		} else if (clientInput.matches("(?i)(\\s*)(get)(\\s*)(time)(\\s*)")) {
 			clientOutput.println(server.getTime());
+		} else if(primeMatch.matches()) {
+			clientOutput.println(this.prime(primeMatch.group(4)));
+		}else {
+			clientOutput.println("Unknown input, please enter a valid input");
 		}
 
 		return exitMatch;
+	}
+
+	private long prime(String digitsStr) {
+		int digits = Integer.parseInt(digitsStr);
+		Random rnd = new Random();
+		int bitsToDec = (int) (3.33 * digits);
+		
+		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, rnd);
+		long primeNum = bigPrime.longValue();
+		return primeNum;
 	}
 
 	private void bye() {
