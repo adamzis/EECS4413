@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.math.BigInteger;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -15,18 +17,25 @@ public class Worker extends Thread {
 	private TCPServer server;
 
 	private String clientIp;
+	private Map<String, String> authMap;
 
 	public Worker(TCPServer server, Socket client) {
 		this.server = server;
 		this.client = client;
+		authMap = new HashMap<>();
+		// garbage security
+		authMap.put("root", "root");
+		// garbage password
+		authMap.put("Daud", "badpassword");
 	}
 
 	public void run() {
 		try {
 			handle();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			server.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println(e.getMessage() + " shutting down");
+			System.exit(1);
 		}
 	}
 
@@ -44,7 +53,6 @@ public class Worker extends Thread {
 		System.out.println("Client Connected");
 
 		clientIO();
-		bye();
 
 		System.out.println("Client Disconnected");
 	}
@@ -53,20 +61,17 @@ public class Worker extends Thread {
 		PrintStream clientOutput = new PrintStream(client.getOutputStream());
 		Scanner clientScanner = new Scanner(client.getInputStream());
 
-		String clientInput = clientScanner.nextLine();
-		boolean closeClient = false;
-		
 		clientOutput.println("Please enter a command, type 'bye' to exit");
+		String clientInput = clientScanner.nextLine();
 
-		while (!closeClient) {
+		while (parseClient(clientInput, clientOutput)) {
+			clientOutput.println("Please enter another command");
 			clientInput = clientScanner.nextLine();
-			clientOutput.println("You entered " + clientInput + " processing\n");
-
-			closeClient = clientCommand(clientInput, clientOutput);
 		}
 
 		clientOutput.println("Disconnecting from server, have a nice day");
 		clientScanner.close();
+		bye();
 	}
 
 	/**
@@ -79,42 +84,64 @@ public class Worker extends Thread {
 	 *            outputs
 	 * @return true if the client enters 'bye', false otherwise
 	 */
-	private boolean clientCommand(String clientInput, PrintStream clientOutput) {
-		boolean exitMatch = false;
+	private boolean parseClient(String clientInput, PrintStream clientOutput) {
+		boolean queryClient = true;
 		Pattern primePattern = Pattern.compile("(\\s*)(prime)(\\s*)(\\d+)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher primeMatch = primePattern.matcher(clientInput);
 
-		if (clientInput.matches("(?i)(\\s*)(bye)(\\s*)")) {
-			exitMatch = true;
+		Pattern authPattern = Pattern.compile("(\\s*)(auth)(\\s*)(\\S*)(\\s*)(\\S*)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher authMatch = authPattern.matcher(clientInput);
+
+		if (clientInput.matches("(?i)(\\s*)(bye|exit)(\\s*)")) {
+			queryClient = false;
+
 		} else if (clientInput.matches("(?i)(\\s*)(get)(\\s*)(time)(\\s*)")) {
-			clientOutput.println(server.getTime());
-		} else if(primeMatch.matches()) {
-			clientOutput.println(this.prime(primeMatch.group(4)));
-		}else {
-			clientOutput.println("Unknown input, please enter a valid input");
+			String currTime = server.getTime();
+			clientOutput.println(currTime + "\n");
+
+		} else if (primeMatch.matches()) {
+			int clientDigits = Integer.parseInt(primeMatch.group(4));
+			long clientPrime = prime(clientDigits);
+
+			clientOutput.println(clientPrime + "\n");
+
+		} else if (authMatch.matches()) {
+			String userNameInput = authMatch.group(4);
+			String passInput = authMatch.group(6);
+
+			clientOutput.println(auth(userNameInput, passInput));
 		}
 
-		return exitMatch;
+		else {
+			clientOutput.println("Don't understand <" + clientInput + ">\n");
+		}
+
+		return queryClient;
 	}
 
-	private long prime(String digitsStr) {
-		int digits = Integer.parseInt(digitsStr);
+	private long prime(int digits) {
 		Random rnd = new Random();
 		int bitsToDec = (int) (3.33 * digits);
-		
+
 		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, rnd);
 		long primeNum = bigPrime.longValue();
 		return primeNum;
 	}
 
-	private void bye() {
-		try {
-			client.close();
-		} catch (IOException e) {
-			server.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-			System.out.println(e.getMessage() + " shutting down");
-			System.exit(1);
+	private String auth(String username, String password) {
+
+		if (authMap.containsKey(username)) {
+			String validPass = authMap.get(username);
+			if (validPass.matches(password)) {
+				return "You are in!";
+			}
 		}
+
+		return "Auth Failure!";
+	}
+
+	private void bye() throws IOException {
+		client.close();
 
 		server.insertLogEntry("Client Disconnected", clientIp);
 	}
