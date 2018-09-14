@@ -11,7 +11,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Worker extends Thread {
+public class Worker implements Runnable {
 
 	private Socket client;
 	private TCPServer server;
@@ -23,8 +23,10 @@ public class Worker extends Thread {
 		this.server = server;
 		this.client = client;
 		authMap = new HashMap<>();
+
 		// garbage security
 		authMap.put("root", "root");
+
 		// garbage password
 		authMap.put("Daud", "badpassword");
 	}
@@ -57,6 +59,14 @@ public class Worker extends Thread {
 		System.out.println("Client Disconnected");
 	}
 
+	/**
+	 * Responsible for sending and receiving input and output, to and from the
+	 * client respectively. Sends the user input to the parseClient method and
+	 * continues to ask for input until the parseClient method returns false, which
+	 * occurs when the client enters 'exit' or 'bye'.
+	 * 
+	 * @throws IOException
+	 */
 	private void clientIO() throws IOException {
 		PrintStream clientOutput = new PrintStream(client.getOutputStream());
 		Scanner clientScanner = new Scanner(client.getInputStream());
@@ -75,27 +85,37 @@ public class Worker extends Thread {
 	}
 
 	/**
-	 * Parses the client input using regex
+	 * Parses the client input using regex and either calls the matching function
+	 * and sends out to the client, or tells the client their input was not valid.
+	 * 
+	 * If the client enters bye, this method returns false.
 	 * 
 	 * @param clientInput
 	 *            the input string passed from the client to the server
 	 * @param clientOutput
 	 *            a reference to the printstream object to return called method
 	 *            outputs
-	 * @return true if the client enters 'bye', false otherwise
+	 * @return true if the client enters any command, false if the client enters bye
 	 */
 	private boolean parseClient(String clientInput, PrintStream clientOutput) {
 		boolean queryClient = true;
+
+		Pattern byePattern = Pattern.compile("(\\s*)(bye|exit)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher byeMatch = byePattern.matcher(clientInput);
+
+		Pattern timePattern = Pattern.compile("(\\s*)(get)(\\s*)(time)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher timeMatch = timePattern.matcher(clientInput);
+
 		Pattern primePattern = Pattern.compile("(\\s*)(prime)(\\s*)(\\d+)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher primeMatch = primePattern.matcher(clientInput);
 
 		Pattern authPattern = Pattern.compile("(\\s*)(auth)(\\s*)(\\S*)(\\s*)(\\S*)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher authMatch = authPattern.matcher(clientInput);
 
-		if (clientInput.matches("(?i)(\\s*)(bye|exit)(\\s*)")) {
+		if (byeMatch.matches()) {
 			queryClient = false;
 
-		} else if (clientInput.matches("(?i)(\\s*)(get)(\\s*)(time)(\\s*)")) {
+		} else if (timeMatch.matches()) {
 			String currTime = server.getTime();
 			clientOutput.println(currTime + "\n");
 
@@ -110,9 +130,8 @@ public class Worker extends Thread {
 			String passInput = authMatch.group(6);
 
 			clientOutput.println(auth(userNameInput, passInput));
-		}
 
-		else {
+		} else {
 			clientOutput.println("Don't understand <" + clientInput + ">\n");
 		}
 
@@ -120,16 +139,16 @@ public class Worker extends Thread {
 	}
 
 	private long prime(int digits) {
-		Random rnd = new Random();
-		int bitsToDec = (int) (3.33 * digits);
+		final float DEC_TO_BIN_LENGTH_RATIO = 3.33f;
+		int bitsToDec = (int) (DEC_TO_BIN_LENGTH_RATIO * digits);
 
-		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, rnd);
+		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
 		long primeNum = bigPrime.longValue();
+
 		return primeNum;
 	}
 
 	private String auth(String username, String password) {
-
 		if (authMap.containsKey(username)) {
 			String validPass = authMap.get(username);
 			if (validPass.matches(password)) {

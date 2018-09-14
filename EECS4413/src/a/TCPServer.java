@@ -29,39 +29,42 @@ public class TCPServer {
 		InetAddress localHost = InetAddress.getLoopbackAddress();
 		String serverIpPort = ipPortToString(server.getInetAddress(), port);
 
-		this.insertLogEntry("Server Start", serverIpPort);
-		this.punch(localHost);
+		insertLogEntry("\nServer Start", serverIpPort);
+		punch(localHost);
 
 		while (!server.isClosed()) {
 			Socket client = createClient(server);
 
 			if (allowedIp(client)) {
 				Worker clientHandler = new Worker(this, client);
-				clientHandler.start();
+				Thread workerThread = new Thread(clientHandler);
+				workerThread.start();
 			} else {
 				firewallViol(client);
 			}
 		}
 
 		closeServer(server);
-		System.out.println("SERVER CLOSED");
 	}
 
 	private void firewallViol(Socket client) {
-		this.insertLogEntry("Firewall Violation", client.getInetAddress().toString());
+		insertLogEntry("Firewall Violation", client.getInetAddress().toString());
+
 		try {
+			PrintStream clientOutput = new PrintStream(client.getOutputStream());
+			clientOutput.println("You are not authorized, closing");
 			client.close();
 		} catch (IOException e) {
-			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
 		}
 	}
 
 	private void closeServer(ServerSocket server) {
 		try {
 			server.close();
-			this.insertLogEntry("Server Shutdown", null);
+			insertLogEntry("Server Shutdown", null);
 		} catch (IOException e) {
-			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
 			System.out.println("Error " + e.getMessage());
 			System.exit(1);
 		}
@@ -73,7 +76,7 @@ public class TCPServer {
 		try {
 			client = server.accept();
 		} catch (IOException e) {
-			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
 		}
 
 		return client;
@@ -83,7 +86,7 @@ public class TCPServer {
 		try {
 			server = new ServerSocket(port);
 		} catch (IOException e) {
-			this.insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
 			System.out.println("Error " + e.getMessage());
 			System.exit(1);
 		}
@@ -94,10 +97,10 @@ public class TCPServer {
 	/**
 	 * Inserts an entry into the log file with the server's date and time.
 	 * 
-	 * @param entry    main event that occurred (Server start, client connection,
-	 *                 etc).
-	 * @param subEntry additional information such as the client's IP address and
-	 *                 port.
+	 * @param entry
+	 *            main event that occurred (Server start, client connection, etc).
+	 * @param subEntry
+	 *            additional information such as the client's IP address and port.
 	 */
 	public void insertLogEntry(String entry, String subEntry) {
 		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
@@ -106,7 +109,8 @@ public class TCPServer {
 	/**
 	 * Adds an IP Address to the fire wall for authorization.
 	 * 
-	 * @param inetAddress an IP address that should be allowed to connect.
+	 * @param inetAddress
+	 *            an IP address that should be allowed to connect.
 	 */
 	public void punch(InetAddress inetAddress) {
 		firewall.add(inetAddress);
@@ -115,7 +119,8 @@ public class TCPServer {
 	/**
 	 * Removes a previously authorized IP address from the fire wall.
 	 * 
-	 * @param inetAddress an IP address that should no longer be allowed to connect.
+	 * @param inetAddress
+	 *            an IP address that should no longer be allowed to connect.
 	 */
 	public void plug(InetAddress inetAddress) {
 		firewall.remove(inetAddress);
@@ -160,8 +165,7 @@ public class TCPServer {
 
 		Set<InetAddress> firewall = new HashSet<>();
 
-		PrintStream log = new PrintStream(new FileOutputStream(logFile, false));
-		log.println();
+		PrintStream log = new PrintStream(new FileOutputStream(logFile, true));
 
 		System.out.println("Starting Server, connection port is " + listenPort);
 		TCPServer theServer = new TCPServer(listenPort, log, firewall);
