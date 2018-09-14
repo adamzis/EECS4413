@@ -71,14 +71,9 @@ public class Worker extends Thread {
 	private boolean clientCommand(String clientInput, PrintStream clientOutput) {
 		boolean exitMatch = false;
 
-		Pattern exitPattern = Pattern.compile("(\\s*)(bye)(\\s*)", Pattern.CASE_INSENSITIVE);
-		Matcher exitMatcher = exitPattern.matcher(clientInput);
-		Pattern timePattern = Pattern.compile("(\\s*)(get)(\\s*)(time)(\\s*)", Pattern.CASE_INSENSITIVE);
-		Matcher timeMatcher = timePattern.matcher(clientInput);
-
-		if (exitMatcher.matches()) {
+		if (clientInput.matches("(?i)(\\s*)(bye)(\\s*)")) {
 			exitMatch = true;
-		} else if (timeMatcher.matches()) {
+		} else if (clientInput.matches("(?i)(\\s*)(get)(\\s*)(time)(\\s*)")) {
 			clientOutput.println(server.getTime());
 		}
 
