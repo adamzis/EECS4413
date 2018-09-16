@@ -11,6 +11,13 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import projA.Course;
+import projA.Student;
+import projA.Util;
+
 public class Worker implements Runnable {
 
 	private Socket client;
@@ -111,6 +118,9 @@ public class Worker implements Runnable {
 
 		Pattern authPattern = Pattern.compile("(\\s*)(auth)(\\s*)(\\S*)(\\s*)(\\S*)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher authMatch = authPattern.matcher(clientInput);
+		
+		Pattern rosterPattern = Pattern.compile("(\\s*)(roster)(\\s*)(\\d+)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher rosterMatch = rosterPattern.matcher(clientInput);
 
 		if (byeMatch.matches()) {
 			queryClient = false;
@@ -131,7 +141,13 @@ public class Worker implements Runnable {
 
 			clientOutput.println(auth(userNameInput, passInput));
 
-		} else {
+		} else if(rosterMatch.matches()) {
+			String courseNum = rosterMatch.group(4);
+			String courseJson = roster(courseNum);
+			System.out.println(courseJson);
+			clientOutput.println(courseJson);
+		}
+		else {
 			clientOutput.println("Don't understand <" + clientInput + ">\n");
 		}
 
@@ -157,6 +173,18 @@ public class Worker implements Runnable {
 		}
 
 		return "Auth Failure!";
+	}
+	
+	private String roster(String courseNum)
+	{
+		Course course = Util.getCourse(courseNum);
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		String courseJson = gson.toJson(course);
+		
+		System.out.println(courseJson);
+		
+		return courseJson;
+		
 	}
 
 	private void bye() throws IOException {
