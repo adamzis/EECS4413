@@ -15,17 +15,24 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import projA.Course;
-import projA.Student;
 import projA.Util;
 
 public class Worker implements Runnable {
 
-	private Socket client;
 	private TCPServer server;
+	private Socket client;
 
 	private String clientIp;
 	private Map<String, String> authMap;
 
+	/**
+	 * Instantiates a worker to manage the socket, while leaving the server free to
+	 * connect to other clients. Creates an authorization Map and implements dummy
+	 * usernames and passwords for testing.
+	 * 
+	 * @param server stores a reference to the TCP server for accessing methods
+	 * @param client the socket corresponding to the connected client
+	 */
 	public Worker(TCPServer server, Socket client) {
 		this.server = server;
 		this.client = client;
@@ -38,6 +45,11 @@ public class Worker implements Runnable {
 		authMap.put("Daud", "badpassword");
 	}
 
+	/**
+	 * Each client should be connected on it's own thread. This method delegates to
+	 * the handle method and catches all IO exceptions that may occur in the handle
+	 * method.
+	 */
 	public void run() {
 		try {
 			handle();
@@ -50,6 +62,8 @@ public class Worker implements Runnable {
 
 	/**
 	 * Handles a connected client socket throughout the lifetime of the connection
+	 * by first inserting a log entry with the client's IP, printing when the client
+	 * connects and disconnects, and initiating IO between the client and server.
 	 * 
 	 * @param client a client socket
 	 * @throws IOException
@@ -65,13 +79,24 @@ public class Worker implements Runnable {
 		System.out.println("Client Disconnected");
 	}
 
+	public long prime(int digits) {
+		final float DEC_TO_BIN_LENGTH_RATIO = 3.33f;
+		int bitsToDec = (int) (DEC_TO_BIN_LENGTH_RATIO * digits);
+
+		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
+		long primeNum = bigPrime.longValue();
+
+		return primeNum;
+	}
+
 	/**
 	 * Responsible for sending and receiving input and output, to and from the
 	 * client respectively. Sends the user input to the parseClient method and
 	 * continues to ask for input until the parseClient method returns false, which
 	 * occurs when the client enters 'exit' or 'bye'.
 	 * 
-	 * @throws IOException
+	 * @throws IOException if the server cannot get the client input or output
+	 *                     stream.
 	 */
 	private void clientIO() throws IOException {
 		PrintStream clientOutput = new PrintStream(client.getOutputStream());
@@ -148,17 +173,7 @@ public class Worker implements Runnable {
 		}
 
 		return queryClient;
-		
-	}
 
-	private long prime(int digits) {
-		final float DEC_TO_BIN_LENGTH_RATIO = 3.33f;
-		int bitsToDec = (int) (DEC_TO_BIN_LENGTH_RATIO * digits);
-
-		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
-		long primeNum = bigPrime.longValue();
-
-		return primeNum;
 	}
 
 	private String auth(String username, String password) {
