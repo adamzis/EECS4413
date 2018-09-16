@@ -11,6 +11,13 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import projA.Course;
+import projA.Student;
+import projA.Util;
+
 public class Worker implements Runnable {
 
 	private Socket client;
@@ -44,8 +51,7 @@ public class Worker implements Runnable {
 	/**
 	 * Handles a connected client socket throughout the lifetime of the connection
 	 * 
-	 * @param client
-	 *            a client socket
+	 * @param client a client socket
 	 * @throws IOException
 	 */
 	public void handle() throws IOException {
@@ -90,11 +96,9 @@ public class Worker implements Runnable {
 	 * 
 	 * If the client enters bye, this method returns false.
 	 * 
-	 * @param clientInput
-	 *            the input string passed from the client to the server
-	 * @param clientOutput
-	 *            a reference to the printstream object to return called method
-	 *            outputs
+	 * @param clientInput  the input string passed from the client to the server
+	 * @param clientOutput a reference to the printstream object to return called
+	 *                     method outputs
 	 * @return true if the client enters any command, false if the client enters bye
 	 */
 	private boolean parseClient(String clientInput, PrintStream clientOutput) {
@@ -109,8 +113,11 @@ public class Worker implements Runnable {
 		Pattern primePattern = Pattern.compile("(\\s*)(prime)(\\s*)(\\d+)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher primeMatch = primePattern.matcher(clientInput);
 
-		Pattern authPattern = Pattern.compile("(\\s*)(auth)(\\s*)(\\S*)(\\s*)(\\S*)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Pattern authPattern = Pattern.compile("(\\s*)(auth)(\\s*)(\\S+)(\\s*)(\\S+)(\\s*)", Pattern.CASE_INSENSITIVE);
 		Matcher authMatch = authPattern.matcher(clientInput);
+
+		Pattern rosterPattern = Pattern.compile("(\\s*)(roster)(\\s*)(\\S+)(\\s*)", Pattern.CASE_INSENSITIVE);
+		Matcher rosterMatch = rosterPattern.matcher(clientInput);
 
 		if (byeMatch.matches()) {
 			queryClient = false;
@@ -131,6 +138,11 @@ public class Worker implements Runnable {
 
 			clientOutput.println(auth(userNameInput, passInput));
 
+		} else if (rosterMatch.matches()) {
+			String courseNum = rosterMatch.group(4);
+			String courseJson = roster(courseNum);
+			System.out.println(courseJson);
+			clientOutput.println(courseJson);
 		} else {
 			clientOutput.println("Don't understand <" + clientInput + ">\n");
 		}
@@ -157,6 +169,15 @@ public class Worker implements Runnable {
 		}
 
 		return "Auth Failure!";
+	}
+
+	private String roster(String courseNum) {
+		Course course = Util.getCourse(courseNum);
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+		String courseJson = gson.toJson(course);
+
+		return courseJson;
 	}
 
 	private void bye() throws IOException {

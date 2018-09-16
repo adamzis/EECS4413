@@ -47,65 +47,6 @@ public class TCPServer {
 		closeServer(server);
 	}
 
-	private void firewallViol(Socket client) {
-		insertLogEntry("Firewall Violation", client.getInetAddress().toString());
-
-		try {
-			PrintStream clientOutput = new PrintStream(client.getOutputStream());
-			clientOutput.println("You are not authorized, closing");
-			client.close();
-		} catch (IOException e) {
-			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-		}
-	}
-
-	private void closeServer(ServerSocket server) {
-		try {
-			server.close();
-			insertLogEntry("Server Shutdown", null);
-		} catch (IOException e) {
-			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-			System.out.println("Error " + e.getMessage());
-			System.exit(1);
-		}
-	}
-
-	private Socket createClient(ServerSocket server) {
-		Socket client = null;
-
-		try {
-			client = server.accept();
-		} catch (IOException e) {
-			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-		}
-
-		return client;
-	}
-
-	private ServerSocket createServer(int port, ServerSocket server) {
-		try {
-			server = new ServerSocket(port);
-		} catch (IOException e) {
-			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-			System.out.println("Error " + e.getMessage());
-			System.exit(1);
-		}
-
-		return server;
-	}
-
-	/**
-	 * Inserts an entry into the log file with the server's date and time.
-	 * 
-	 * @param entry
-	 *            main event that occurred (Server start, client connection, etc).
-	 * @param subEntry
-	 *            additional information such as the client's IP address and port.
-	 */
-	public void insertLogEntry(String entry, String subEntry) {
-		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
-	}
-
 	/**
 	 * Adds an IP Address to the fire wall for authorization.
 	 * 
@@ -126,21 +67,16 @@ public class TCPServer {
 		firewall.remove(inetAddress);
 	}
 
-	private boolean allowedIp(Socket client) {
-		InetAddress clientIp = client.getInetAddress();
-		boolean allowedIp = firewall.contains(clientIp);
-
-		if (allowedIp) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	private String ipPortToString(InetAddress ip, int port) {
-		String ipPort = ip.toString() + ":" + Integer.toString(port);
-
-		return ipPort;
+	/**
+	 * Inserts an entry into the log file with the server's date and time.
+	 * 
+	 * @param entry
+	 *            main event that occurred (Server start, client connection, etc).
+	 * @param subEntry
+	 *            additional information such as the client's IP address and port.
+	 */
+	public void insertLogEntry(String entry, String subEntry) {
+		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
 	}
 
 	/**
@@ -151,9 +87,73 @@ public class TCPServer {
 	public String getTime() {
 		ZonedDateTime currTime = ZonedDateTime.now();
 		DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("E d MMM yyyy HH:mm:ss z");
-
+	
 		String formattedTime = currTime.format(timeFormat);
 		return formattedTime;
+	}
+
+	private ServerSocket createServer(int port, ServerSocket server) {
+		try {
+			server = new ServerSocket(port);
+		} catch (IOException e) {
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println("Error " + e.getMessage());
+			System.exit(1);
+		}
+	
+		return server;
+	}
+
+	private void closeServer(ServerSocket server) {
+		try {
+			server.close();
+			insertLogEntry("Server Shutdown", null);
+		} catch (IOException e) {
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println("Error " + e.getMessage());
+			System.exit(1);
+		}
+	}
+
+	private Socket createClient(ServerSocket server) {
+		Socket client = null;
+	
+		try {
+			client = server.accept();
+		} catch (IOException e) {
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+		}
+	
+		return client;
+	}
+
+	private String ipPortToString(InetAddress ip, int port) {
+		String ipPort = ip.toString() + ":" + Integer.toString(port);
+	
+		return ipPort;
+	}
+
+	private void firewallViol(Socket client) {
+		insertLogEntry("Firewall Violation", client.getInetAddress().toString());
+
+		try {
+			PrintStream clientOutput = new PrintStream(client.getOutputStream());
+			clientOutput.println("You are not authorized, closing");
+			client.close();
+		} catch (IOException e) {
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+		}
+	}
+
+	private boolean allowedIp(Socket client) {
+		InetAddress clientIp = client.getInetAddress();
+		boolean allowedIp = firewall.contains(clientIp);
+
+		if (allowedIp) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	public static void main(String[] args) throws FileNotFoundException {
