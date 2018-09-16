@@ -148,6 +148,7 @@ public class Worker implements Runnable {
 		}
 
 		return queryClient;
+		
 	}
 
 	private long prime(int digits) {
