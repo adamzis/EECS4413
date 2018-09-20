@@ -79,9 +79,9 @@ public class Worker implements Runnable {
 		System.out.println("Client Disconnected");
 	}
 
-	public long prime(int digits) {
-		final float DEC_TO_BIN_LENGTH_RATIO = 3.33f;
-		int bitsToDec = (int) (DEC_TO_BIN_LENGTH_RATIO * digits);
+	private long prime(int digits) {
+		final float BITS_PER_DIGIT = 3.00f;
+		int bitsToDec = (int) (BITS_PER_DIGIT * digits);
 
 		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
 		long primeNum = bigPrime.longValue();
