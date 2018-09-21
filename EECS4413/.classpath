@@ -7,7 +7,7 @@
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
-	<classpathentry kind="lib" path="C:/Users/adamj/git/EECS4413/gson-2.6.2.jar"/>
-	<classpathentry kind="lib" path="C:/Users/adamj/git/EECS4413/projA.jar"/>
+	<classpathentry kind="lib" path="/cs/home/adamzis/git/EECS4413/EECS4413/src/a/gson-2.6.2.jar"/>
+	<classpathentry kind="lib" path="/eecs/home/adamzis/git/EECS4413/EECS4413/src/a/projA.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

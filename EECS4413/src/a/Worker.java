@@ -79,14 +79,14 @@ public class Worker implements Runnable {
 		System.out.println("Client Disconnected");
 	}
 
-	private long prime(int digits) {
+	private String prime(int digits) {
 		final float BITS_PER_DIGIT = 3.00f;
 		int bitsToDec = (int) (BITS_PER_DIGIT * digits);
 
 		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
-		long primeNum = bigPrime.longValue();
-
-		return primeNum;
+		String prime = bigPrime.toString();
+		
+		return prime;
 	}
 
 	/**
@@ -153,7 +153,7 @@ public class Worker implements Runnable {
 
 		} else if (primeMatch.matches()) {
 			int clientDigits = Integer.parseInt(primeMatch.group(4));
-			long clientPrime = prime(clientDigits);
+			String clientPrime = prime(clientDigits);
 
 			clientOutput.println(clientPrime + "\n");
 
