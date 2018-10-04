@@ -26,7 +26,7 @@ public class TCPServer {
 
 		InetAddress localHost = InetAddress.getLoopbackAddress();
 
-		insertLogEntry("\nServer Start", ipPortToString(server.getInetAddress(), port));
+		insertLogEntry("\nServer Start", localHost.toString() + ":" + Integer.toString(port));
 
 		punch(localHost);
 
@@ -46,60 +46,6 @@ public class TCPServer {
 		}
 	}
 
-	public void closeServer() {
-		try {
-			server.close();
-			insertLogEntry("Server Shutdown", null);
-		} catch (IOException e) {
-			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
-			System.out.println("Error " + e.getMessage());
-			System.exit(1);
-		}
-	}
-
-	/**
-	 * Adds an IP Address to the fire wall for authorization.
-	 * 
-	 * @param inetAddress an IP address that should be allowed to connect.
-	 */
-	public void punch(InetAddress inetAddress) {
-		firewall.add(inetAddress);
-	}
-
-	/**
-	 * Removes a previously authorized IP address from the fire wall.
-	 * 
-	 * @param inetAddress an IP address that should no longer be allowed to connect.
-	 */
-	public void plug(InetAddress inetAddress) {
-		firewall.remove(inetAddress);
-	}
-
-	/**
-	 * Inserts an entry into the log file with the server's date and time.
-	 * 
-	 * @param entry    main event that occurred (Server start, client connection,
-	 *                 etc).
-	 * @param subEntry additional information such as the client's IP address and
-	 *                 port.
-	 */
-	public void insertLogEntry(String entry, String subEntry) {
-		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
-	}
-
-	/**
-	 * Retrieves the date and time of the server formatted into a string.
-	 * 
-	 * @return A String containing the server's date and time.
-	 */
-	public String getTime() {
-		ZonedDateTime currTime = ZonedDateTime.now();
-		DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("E d MMM yyyy HH:mm:ss z");
-
-		String formattedTime = currTime.format(timeFormat);
-		return formattedTime;
-	}
-
 	private Socket createClient(ServerSocket server) {
 		Socket client = null;
 
@@ -114,10 +60,13 @@ public class TCPServer {
 		return client;
 	}
 
-	private String ipPortToString(InetAddress ip, int port) {
-		String ipPort = ip.toString() + ":" + Integer.toString(port);
+	private boolean allowedIp(Socket client) {
+		InetAddress clientIp = client.getInetAddress();
 
-		return ipPort;
+		if (firewall.contains(clientIp))
+			return true;
+		else
+			return false;
 	}
 
 	private void firewallViol(Socket client) {
@@ -134,25 +83,72 @@ public class TCPServer {
 		}
 	}
 
-	private boolean allowedIp(Socket client) {
-		InetAddress clientIp = client.getInetAddress();
-		boolean allowedIp = firewall.contains(clientIp);
-
-		if (allowedIp) {
-			return true;
-		} else {
-			return false;
+	public void closeServer() {
+		try {
+			server.close();
+			insertLogEntry("Server Shutdown", "");
+		} catch (IOException e) {
+			insertLogEntry(e.getMessage(), e.getStackTrace().toString());
+			System.out.println("Error " + e.getMessage());
+			System.exit(1);
 		}
+	}
+
+	/**
+	 * Retrieves the date and time of the server formatted into a string.
+	 * 
+	 * @return A String containing the server's date and time.
+	 */
+	public String getTime() {
+		ZonedDateTime currTime = ZonedDateTime.now();
+		DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("E d MMM yyyy HH:mm:ss z");
+
+		String formattedTime = currTime.format(timeFormat);
+		return formattedTime;
+	}
+
+	/**
+	 * Adds an IP Address to the fire wall for authorization.
+	 * 
+	 * @param inetAddress
+	 *            an IP address that should be allowed to connect.
+	 */
+	public void punch(InetAddress inetAddress) {
+		firewall.add(inetAddress);
+	}
+
+	/**
+	 * Removes a previously authorized IP address from the fire wall.
+	 * 
+	 * @param inetAddress
+	 *            an IP address that should no longer be allowed to connect.
+	 */
+	public void plug(InetAddress inetAddress) {
+		firewall.remove(inetAddress);
+	}
+
+	/**
+	 * Inserts an entry into the log file with the server's date and time.
+	 * 
+	 * @param entry
+	 *            main event that occurred (Server start, client connection, etc).
+	 * @param subEntry
+	 *            additional information such as the client's IP address and port.
+	 */
+	public void insertLogEntry(String entry, String subEntry) {
+		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
 	}
 
 	public static void main(String[] args) throws IOException {
 
 		int listenPort = 10560;
+		Set<InetAddress> firewall = new HashSet<>();
 
 		String userHome = System.getProperty("user.home");
 		File logFile = new File(userHome, "/Documents/4413/log.txt");
 
-		Set<InetAddress> firewall = new HashSet<>();
+		if (logFile.createNewFile())
+			System.out.println("Log file created at " + logFile.getAbsolutePath());
 
 		PrintStream log = new PrintStream(new FileOutputStream(logFile, true));
 
