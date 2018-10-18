@@ -30,8 +30,10 @@ public class Worker implements Runnable {
 	 * connect to other clients. Creates an authorization Map and implements dummy
 	 * usernames and passwords for testing.
 	 * 
-	 * @param server stores a reference to the TCP server for accessing methods
-	 * @param client the socket corresponding to the connected client
+	 * @param server
+	 *            stores a reference to the TCP server for accessing methods
+	 * @param client
+	 *            the socket corresponding to the connected client
 	 */
 	public Worker(TCPServer server, Socket client) {
 		this.server = server;
@@ -65,7 +67,8 @@ public class Worker implements Runnable {
 	 * by first inserting a log entry with the client's IP, printing when the client
 	 * connects and disconnects, and initiating IO between the client and server.
 	 * 
-	 * @param client a client socket
+	 * @param client
+	 *            a client socket
 	 * @throws IOException
 	 */
 	public void handle() throws IOException {
@@ -75,18 +78,6 @@ public class Worker implements Runnable {
 		System.out.println("Client Connected");
 
 		clientIO();
-
-		System.out.println("Client Disconnected");
-	}
-
-	private String prime(int digits) {
-		final float BITS_PER_DIGIT = 3.00f;
-		int bitsToDec = (int) (BITS_PER_DIGIT * digits);
-
-		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
-		String prime = bigPrime.toString();
-		
-		return prime;
 	}
 
 	/**
@@ -95,24 +86,49 @@ public class Worker implements Runnable {
 	 * continues to ask for input until the parseClient method returns false, which
 	 * occurs when the client enters 'exit' or 'bye'.
 	 * 
-	 * @throws IOException if the server cannot get the client input or output
-	 *                     stream.
+	 * @throws IOException
+	 *             if the server cannot get the client input or output stream.
 	 */
 	private void clientIO() throws IOException {
 		PrintStream clientOutput = new PrintStream(client.getOutputStream());
 		Scanner clientScanner = new Scanner(client.getInputStream());
+		String clientInput;
 
-		clientOutput.println("Please enter a command, type 'bye' to exit");
-		String clientInput = clientScanner.nextLine();
+		long start, end;
+		double seconds;
 
-		while (parseClient(clientInput, clientOutput)) {
-			clientOutput.println("Please enter another command");
+		boolean keepParse, first;
+		first = keepParse = true;
+		boolean isBot = false;
+
+		while (keepParse) {
+			start = System.currentTimeMillis();
+			clientOutput.println("Please enter a command, type 'bye' to exit");
 			clientInput = clientScanner.nextLine();
+
+			end = System.currentTimeMillis() - start;
+			seconds = (double) end / 1000.0;
+
+			keepParse = parseClient(clientInput, clientOutput);
+			if (seconds < 2.0 && !first) {
+				clientScanner.close();
+				client.close();
+
+				server.insertLogEntry("Dropping the connection", clientIp);
+				keepParse = false;
+				isBot = true;
+			}
+			first = false;
 		}
 
-		clientOutput.println("Disconnecting from server, have a nice day");
-		clientScanner.close();
-		bye();
+		if (!isBot) {
+			clientOutput.println("Disconnecting from server, have a nice day");
+			server.insertLogEntry("Client Disconnected", clientIp);
+			clientScanner.close();
+			bye();
+		}
+
+		// Apologies for messy method, if wasn't a test would refactor.
 	}
 
 	/**
@@ -121,9 +137,11 @@ public class Worker implements Runnable {
 	 * 
 	 * If the client enters bye, this method returns false.
 	 * 
-	 * @param clientInput  the input string passed from the client to the server
-	 * @param clientOutput a reference to the printstream object to return called
-	 *                     method outputs
+	 * @param clientInput
+	 *            the input string passed from the client to the server
+	 * @param clientOutput
+	 *            a reference to the printstream object to return called method
+	 *            outputs
 	 * @return true if the client enters any command, false if the client enters bye
 	 */
 	private boolean parseClient(String clientInput, PrintStream clientOutput) {
@@ -176,6 +194,32 @@ public class Worker implements Runnable {
 
 	}
 
+	private String prime(int digits) {
+		BigInteger prime;
+		String stringPrime;
+		Map<Integer, BigInteger> primeCache = server.getPrimeCache();
+
+		if (primeCache.containsKey(digits)) {
+			prime = primeCache.get(digits);
+			stringPrime = prime.toString() + " (from cache)";
+		} else {
+			prime = makePrime(digits);
+			primeCache.put(digits, prime);
+			stringPrime = prime.toString();
+		}
+
+		return stringPrime;
+	}
+
+	private BigInteger makePrime(int digits) {
+		final float BITS_PER_DIGIT = 3.00f;
+		int bitsToDec = (int) (BITS_PER_DIGIT * digits);
+
+		BigInteger bigPrime = BigInteger.probablePrime(bitsToDec, new Random());
+
+		return bigPrime;
+	}
+
 	private String auth(String username, String password) {
 		if (authMap.containsKey(username)) {
 			String validPass = authMap.get(username);
@@ -198,7 +242,5 @@ public class Worker implements Runnable {
 
 	private void bye() throws IOException {
 		client.close();
-
-		server.insertLogEntry("Client Disconnected", clientIp);
 	}
 }
