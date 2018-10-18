@@ -4,12 +4,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public class TCPServer {
@@ -17,12 +21,14 @@ public class TCPServer {
 	private PrintStream log;
 	private Set<InetAddress> firewall;
 	ServerSocket server;
+	private Map<Integer, BigInteger> primeCache;
 
 	public TCPServer(int port, PrintStream log, Set<InetAddress> firewall) throws IOException {
 
 		this.log = log;
 		this.firewall = firewall;
 		this.server = new ServerSocket(port);
+		this.primeCache = new HashMap<>();
 
 		InetAddress localHost = InetAddress.getLoopbackAddress();
 
@@ -32,8 +38,8 @@ public class TCPServer {
 
 	}
 
-	public void listen() {
-		while (!server.isClosed()) {
+	public void listen(File running) {
+		while (running.exists()) {
 			Socket client = createClient(server);
 
 			if (allowedIp(client)) {
@@ -139,23 +145,29 @@ public class TCPServer {
 		log.println(entry + " " + "(" + subEntry + ")" + " - " + getTime());
 	}
 
+	public Map<Integer, BigInteger> getPrimeCache() {
+		return primeCache;
+	}
+
 	public static void main(String[] args) throws IOException {
 
 		int listenPort = 10560;
 		Set<InetAddress> firewall = new HashSet<>();
 
-		String userHome = System.getProperty("user.home");
-		File logFile = new File(userHome, "/Documents/4413/log.txt");
+		File logFile = new File("log.txt");
+		File running = new File("running.txt");
 
 		if (logFile.createNewFile())
 			System.out.println("Log file created at " + logFile.getAbsolutePath());
+		if (running.createNewFile())
+			System.out.println("Running file created at " + running.getAbsolutePath());
 
 		PrintStream log = new PrintStream(new FileOutputStream(logFile, true));
 
 		System.out.println("Starting Server, connection port is " + listenPort);
 
 		TCPServer theServer = new TCPServer(listenPort, log, firewall);
-		theServer.listen();
+		theServer.listen(running);
 		theServer.closeServer();
 
 		System.out.println("Server shutting down");
