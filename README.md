@@ -6,4 +6,4 @@ Simple multithreaded server that can handle multiple client connections with sim
 
 All functions are based on command line inputs handled by 'telnet'.
 
-Project was modifed in a lab test, lab test mark based on project will be posted here once results are available.
+Project was modifed in a lab test. Lab test final mark (85%).
